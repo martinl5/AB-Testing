@@ -46,6 +46,7 @@ For each metric, we compare the performance between the control and test groups 
 We conduct the following statistical tests:
 - **Z-test for proportions**: Used for the sanity check on impressions to ensure the randomization was successful.
 - **T-tests (or other relevant tests)**: These are used to compare the key metrics (e.g., purchases, clicks) between the control and test groups, determining if there are statistically significant differences.
+- **Beta-Binomial Bayesian analysis**: Posterior Beta distributions are computed for each metric's conversion rate; P(Test > Control) is estimated via Monte Carlo sampling.
 
 ### 6. **Results & Interpretation**
 - **Statistical Significance**: The test metrics are evaluated using p-values and confidence intervals to determine if the new campaign had a statistically significant impact on user behavior.
@@ -60,6 +61,15 @@ Based on the statistical analysis, the conclusion is **not to launch the new Tes
 - **Refine the Campaign**: Investigate the reasons behind the drop in Add to Cart rate and consider refining the campaign strategy to improve user experience at this crucial stage.
 - **Run Further Tests**: Conduct smaller-scale A/B tests on different variations of the campaign to identify potential improvements.
 - **Optimize for Cost**: Focus on improving the cost-efficiency of the marketing campaign by ensuring that increases in spend result in meaningful improvements in metrics like purchases.
+
+### 9. **Bayesian A/B Testing**
+A complementary Bayesian analysis using the **Beta-Binomial conjugate model** evaluates each metric as a per-user conversion rate (successes ÷ Reach). Key outputs include:
+- **Posterior distributions** for control and test conversion rates
+- **95% Highest Density Intervals (HDI)** — the Bayesian equivalent of confidence intervals, with a direct probability interpretation
+- **P(Test > Control)** — the posterior probability that the test campaign's true rate exceeds the control's, estimated via Monte Carlo simulation (100,000 samples)
+- **Expected lift distribution** — the posterior distribution of the relative improvement in conversion rate
+
+The Bayesian section also reconciles the apparent disagreement with the frequentist results: while the frequentist CIs compared raw daily event counts (finding fewer events in the test group), the Bayesian analysis normalizes by Reach and finds the test campaign converts users at credibly higher rates. Both perspectives are valid but answer different questions.
 
 ## How to Use This Notebook
 
