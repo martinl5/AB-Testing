@@ -6,6 +6,12 @@ This project aims to analyze the effectiveness of a new marketing campaign (Test
 
 The analysis includes data exploration, statistical testing, and recommendations based on the results of the A/B test.
 
+## A Note on Analytical Approach
+
+As a data scientist, I tend to think in Bayesian terms. Rather than asking "is the p-value below 0.05?", I find it more useful to ask "what is the probability this change is actually an improvement, and by how much?" This framing maps more naturally to real business decisions, where we care about expected outcomes and uncertainty — not just a binary reject/fail-to-reject verdict.
+
+This project reflects that mindset. The frequentist analysis (confidence intervals, z-tests) is included because it is the industry standard and provides an important sanity-check lens. But the Bayesian section is where I find the real insight: posterior distributions, credible intervals, and P(Test > Control) tell a richer story about what the data actually support.
+
 ## Project Structure
 
 - **A/B Test Notebook**: The main analysis is conducted in this Jupyter Notebook (`ab_testing.ipynb`), which walks through each step of the A/B test, from data preparation to final recommendations.
@@ -49,10 +55,7 @@ We conduct the following statistical tests:
 - **Beta-Binomial Bayesian analysis**: Posterior Beta distributions are computed for each metric's conversion rate; P(Test > Control) is estimated via Monte Carlo sampling.
 
 ### 6. **Results & Interpretation**
-- **Statistical Significance**: The test metrics are evaluated using p-values and confidence intervals to determine if the new campaign had a statistically significant impact on user behavior.
-- **Effect on Key Metrics**: The Add to Cart rate showed a significant decrease in the test group, raising concerns about the Test campaign's impact on conversions.
-  
-If the p-value is less than the threshold (e.g., 0.05), the test results are considered statistically significant. In this case, a statistically significant drop in Add to Cart rates was detected.
+Results are summarized in the **[Results section below](#results)**. Key takeaway: the frequentist and Bayesian analyses tell complementary stories — the frequentist lens finds fewer raw events in the test group, while the Bayesian lens finds higher per-user conversion rates. See the Results section for the full breakdown with numbers.
 
 ### 7. **Recommendation**
 Based on the statistical analysis, the conclusion is **not to launch the new Test campaign** due to its negative impact on key metrics, particularly the Add to Cart rate. The Test campaign also increases marketing spend without a proportional improvement in purchases or other crucial metrics, making it less cost-effective.
@@ -70,6 +73,36 @@ A complementary Bayesian analysis using the **Beta-Binomial conjugate model** ev
 - **Expected lift distribution** — the posterior distribution of the relative improvement in conversion rate
 
 The Bayesian section also reconciles the apparent disagreement with the frequentist results: while the frequentist CIs compared raw daily event counts (finding fewer events in the test group), the Bayesian analysis normalizes by Reach and finds the test campaign converts users at credibly higher rates. Both perspectives are valid but answer different questions.
+
+## Results
+
+### Frequentist Analysis (raw daily metric differences)
+
+| Metric | 95% Confidence Interval | Conclusion |
+|---|---|---|
+| Impressions (sanity check) | p = 0.14 | ✅ Randomization valid |
+| Add to Cart | (−609.5, −230.0) daily events | ❌ Significantly fewer events |
+| Purchases | (−100.5, +98.9) daily events | ⚠️ Inconclusive |
+| Website Clicks | (−154.5, +1584.1) daily events | ⚠️ Inconclusive |
+| Reach | (−48,295, −22,594) daily users | ❌ Significantly fewer users reached |
+
+The frequentist analysis suggested **do not launch** the test campaign: it showed fewer add-to-cart events and reduced reach, with no statistically significant gains in purchases or clicks.
+
+### Bayesian Analysis (per-user conversion rates, denominator = Reach)
+
+| Metric | P(Test > Control) | Expected Lift | 95% Credible Interval |
+|---|:---:|:---:|---|
+| Add to Cart | **1.0000** | +12.6% | (10.9%, 14.4%) |
+| Purchases | **1.0000** | +66.0% | (62.4%, 69.8%) |
+| Website Clicks | **1.0000** | +88.6% | (87.4%, 89.8%) |
+
+When normalized by the number of unique users each campaign actually reached, the test campaign converts users at substantially higher rates across every metric.
+
+### Reconciling the Two Perspectives
+
+The apparent contradiction arises because the test campaign reached ~40% fewer unique users (1.6M vs. 2.7M). This compressed raw event counts — not because the campaign was less effective per user, but because it exposed fewer people. The Bayesian analysis controls for this by measuring conversion *rate* rather than absolute volume.
+
+> **Bottom line**: The test campaign is more efficient at converting users it reaches. Whether to launch depends on whether the business can address the targeting inefficiency that led to lower Reach.
 
 ## How to Use This Notebook
 
