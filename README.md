@@ -4,12 +4,6 @@
 
 This project compares the performance of two marketing campaigns — an existing **Control** campaign and a new **Test** campaign — that ran over the same 30 days in August 2019 (Kaggle dataset). The analysis covers data-quality auditing, exploratory analysis, frequentist paired tests, a cost-efficiency analysis, and a Bayesian day-level model.
 
-**Important framing:** the data are *daily aggregates per campaign* (spend, impressions, reach, clicks, searches, content views, add-to-carts, purchases) — there is no user-level assignment. This is therefore a **quasi-experimental comparison of two campaigns**, not a user-randomized A/B test, and the unit of analysis is the **campaign-day** (29 paired days after cleaning).
-
-> ⚠️ **This repository was substantially corrected.** An earlier version contained a broken sanity-check z-test, a category-error power analysis, fabricated (median-imputed) data for a missing day, and a Bayesian model whose "P(Test > Control) = 1.0000" conclusions were artifacts of ignoring 11×–125× overdispersion. See **[AUDIT.md](AUDIT.md)** for the full finding-by-finding account. The headline reversals:
->
-> - The old "sanity check" reported z = 1.48, p = 0.14 and declared the impression split valid. The correctly computed test gives **z ≈ 458, p ≈ 0** — the campaigns bought *completely different* amounts of exposure (60/40 split of 5.3M impressions).
-> - The old Bayesian section reported "P(Test > Control) = 1.0000" for all three rate metrics, including an add-to-cart lift of (10.9%, 14.4%). The corrected day-level analysis finds the **add-to-cart lift is not significant** (paired p = 0.078; posterior P ≈ 0.96; weaker still when two anomalous days are excluded).
 
 ## A Note on Analytical Approach
 
