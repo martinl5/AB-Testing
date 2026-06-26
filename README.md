@@ -60,7 +60,7 @@ Wilcoxon and permutation tests agree with each verdict.
 
 ### Bayesian analysis (day-level model)
 
-The naive pooled Beta-Binomial model (kept in the notebook as a failure-mode illustration) claims P(Test > Control) > 0.9999 for all three metrics with implausibly tight intervals. An overdispersion diagnostic shows its standard errors are understated by **11×–125×**. The corrected model — a conjugate Normal–Inverse-Gamma posterior on the paired daily rate differences — gives:
+ A conjugate Normal–Inverse-Gamma posterior on the paired daily rate differences — gives:
 
 | Metric (per Reach) | P(Test > Control) | Relative lift (mean) | 95% credible interval |
 |---|:---:|:---:|---|
@@ -72,7 +72,7 @@ The naive pooled Beta-Binomial model (kept in the notebook as a failure-mode ill
 
 ### Why the count-based and rate-based results differ
 
-The earlier README framed this as "frequentist vs. Bayesian". That was wrong: the two sections analyzed **different estimands** — raw daily *counts* vs. *rates per reach*. With the estimand fixed, the paradigms agree (e.g. Purchases/Reach: paired p = 0.0045 ↔ posterior P ≈ 0.998). Both descriptions are true simultaneously: the test campaign converted a much smaller delivered audience at much higher rates, ending with the same purchase volume at higher cost.
+The two sections analyzed **different estimands** — raw daily *counts* vs. *rates per reach*. Both descriptions are true simultaneously: the test campaign converted a much smaller delivered audience at much higher rates, ending with the same purchase volume at higher cost.
 
 ## Recommendation
 
