@@ -1,109 +1,105 @@
-# A/B-Style Comparison of Two Marketing Campaigns
+# A/B Testing Basics: Two Marketing Campaigns
 
-## Overview
+A pared-down walkthrough of the **basics of A/B testing**, using two real
+marketing campaigns (a **Control** and a **Test** campaign that ran over the
+same 30 days in August 2019, [Kaggle dataset](https://www.kaggle.com/datasets/amirmotefaker/ab-testing-dataset/data)).
 
-This project compares the performance of two marketing campaigns — an existing **Control** campaign and a new **Test** campaign — that ran over the same 30 days in August 2019 (Kaggle dataset). The analysis covers data-quality auditing, exploratory analysis, frequentist paired tests, a cost-efficiency analysis, and a Bayesian day-level model.
+The notebook does three things:
 
+1. **Load and clean** the daily campaign data.
+2. **Compare conversion rates** (Control vs Test) with a simple paired test.
+3. **Design an A/B test** — choose a significance level (α), power (1−β) and a
+   minimum detectable effect (MDE), then compute the required **sample size per
+   variation**. This section mirrors
+   [Evan Miller's sample-size calculator](https://www.evanmiller.org/ab-testing/sample-size.html).
 
-## A Note on Analytical Approach
+## Data
 
-I find Bayesian framing more decision-relevant than binary significance verdicts: "what is the probability this change is an improvement, and by how much?" maps directly to business choices. But this project is also a lesson in why **the model matters more than the paradigm**: a Bayesian model that ignores the data-generating process (here, massive day-to-day overdispersion) produces confident nonsense. The corrected notebook shows the naive model, diagnoses its failure, and replaces it with a day-level model whose conclusions agree with the frequentist analysis on the same estimand.
+- `control_group.csv`, `test_group.csv` — daily aggregates per campaign
+  (semicolon-separated), at the repository root. Columns: spend, impressions,
+  reach, website clicks, searches, view-content, add-to-cart, purchases.
+- **Cleaning:** 2019-08-05 is dropped from both groups (the control campaign has
+  no metrics that day) → **29 paired days** per campaign.
+- The data has real quality issues (funnel-tracking violations, two anomalous
+  low-reach test days) that are deliberately left in and *flagged*, not fixed —
+  see [`AUDIT.md`](AUDIT.md) for the full finding-by-finding record.
 
-## Data Quality
+## Method
 
-The raw data has real problems, all surfaced programmatically in the notebook's audit section:
+Each row is a *daily aggregate*, and the two campaigns differ in spend and
+delivery (the control served ~60% of all impressions), so the groups are **not
+comparable in raw exposure**. We therefore compare **rates per unit of reach**,
+not raw counts:
 
-| Issue | Detail | Handling |
-|---|---|---|
-| Missing day | Control 2019-08-05 has no metrics | Dropped from **both** groups (no imputation) → 29 paired days |
-| Funnel violation | Control 2019-08-30: 670 purchases but only 442 add-to-carts | Kept, flagged — purchase tracking is unreliable |
-| Funnel anomalies | Add-to-cart > view-content on 7 control days + 1 test day; searches > clicks on control 2019-08-10 | Kept, flagged |
-| Delivery collapse | Test 2019-08-12 and 2019-08-19: Reach ≈ 10.6k vs a 44k median (08-12 has Reach/Impressions = 0.085); per-reach rates spike up to ~10× | Kept, but every conclusion re-checked in a sensitivity analysis excluding these days |
-| Reach semantics | Reach is a *daily* figure; summing it double-counts people seen on multiple days | Rates treated as relative efficiency measures, not per-person probabilities |
+- **Clicks/Reach**, **AddToCart/Reach**, **Purchases/Reach**.
 
-## Analysis Design
+Both campaigns share the same 29 dates, so the comparison is **paired** by date
+(a paired t-test on the within-date Test − Control differences).
 
-- **Unit of analysis:** campaign-day, **paired by date** (both campaigns share the same 29 dates).
-- **Three pre-designated primary metrics** (daily rates, denominator = daily Reach): Clicks/Reach, AddToCart/Reach, Purchases/Reach.
-- **Multiplicity:** Holm step-down correction across the three primary tests.
-- **Robustness:** Wilcoxon signed-rank and sign-flip permutation tests alongside each paired t-test.
-- **Sensitivity:** all tests re-run excluding the two anomalous test-delivery days.
-- **Design sensitivity:** a closed-form paired-t MDE calculation shows 29 daily aggregates can only detect ~94–152% *relative* effects — this design cannot see small lifts.
-- **Secondary:** paired comparisons of raw daily volumes, and a cost-efficiency analysis (the Spend column was unused in the original analysis).
+> *Caveat:* summed Reach double-counts people seen on multiple days, so these
+> rates are relative efficiency measures, not per-person conversion
+> probabilities.
 
 ## Results
 
-### Exposure comparability (impressions)
+Paired day-level comparison (n = 29 days):
 
-Control served 3.18M impressions vs. test's 2.12M (60/40 split): **z ≈ 458, p ≈ 0**. The groups are *not* comparable in exposure, so raw counts cannot be compared directly — all primary analysis is on rates.
+| Metric (per Reach) | Control | Test  | p (paired t) | Significant (α=0.05) |
+|--------------------|:-------:|:-----:|:------------:|:--------------------:|
+| Clicks/Reach       | 0.064   | 0.178 | 0.0023       | ✅ yes               |
+| AddToCart/Reach    | 0.016   | 0.025 | 0.0780       | ❌ no                |
+| Purchases/Reach    | 0.006   | 0.014 | 0.0045       | ✅ yes               |
 
-### Primary metrics — paired day-level rates (n = 29 days)
+The other half of the story (raw volumes): the test campaign reached far fewer
+people and ended with essentially the **same total purchases** (14,869 vs
+15,161) at **~12% higher spend** — cost per purchase **$5.02 vs $4.41**. So the
+per-reach rate advantage did **not** translate into more sales.
 
-| Metric (per Reach) | Control | Test | 95% CI of diff | p (paired t) | p (Holm) | p excl. anomalous days | Verdict |
-|---|---|---|---|---|---|---|---|
-| Clicks/Reach | 0.064 | 0.178 | (0.044, 0.183) | 0.0023 | 0.0069 | 0.0001 | ✅ Test higher |
-| AddToCart/Reach | 0.016 | 0.025 | (−0.001, 0.020) | 0.0780 | 0.0780 | 0.2556 | ⚠️ Not significant |
-| Purchases/Reach | 0.006 | 0.014 | (0.003, 0.013) | 0.0045 | 0.0090 | 0.0025 | ✅ Test higher |
+**Bottom line:** don't scale the test campaign yet. Fix delivery/targeting and
+event tracking, then re-test at the user level with an adequate sample size (see
+below).
 
-Wilcoxon and permutation tests agree with each verdict.
+## Designing the test (α, β, MDE, sample size)
 
-### Volumes and cost (the other half of the story)
+Evan Miller's calculator answers "how big does the test need to be?" from four
+inputs:
 
-| Quantity | Control | Test | Note |
-|---|---|---|---|
-| Total reach (person-days) | 2.58M | 1.51M | Test reached far fewer people (p < 0.0001) |
-| Total purchases | 15,161 | 14,869 | No difference (p = 0.84) |
-| Total add-to-carts | 37,700 | 25,490 | Test significantly lower (p = 0.0003) |
-| Total spend | $66,818 | $74,595 | Test spent ~12% more |
-| **Cost per purchase** | **$4.41** | **$5.02** | ~14% worse for test (daily paired p = 0.15) |
-| Cost per click | $0.43 | $0.43 | Identical |
+- **Baseline conversion rate** `p` — the current (control) rate.
+- **Minimum detectable effect (MDE)** — the smallest lift worth detecting
+  (relative or absolute).
+- **Significance level α** — false-positive rate (default 0.05).
+- **Statistical power 1 − β** — chance of detecting a true effect of size MDE
+  (default 0.80).
 
-### Bayesian analysis (day-level model)
+The notebook's `sample_size()` helper implements the standard two-sided
+two-proportion formula (validated against Evan Miller's calculator: baseline
+20%, +5% relative lift, α=0.05, power=0.80 → ~25,600 per variation).
 
- A conjugate Normal–Inverse-Gamma posterior on the paired daily rate differences — gives:
+Applied to this campaign's low purchase baseline (~0.6%), detecting even a
+**+20% relative lift needs ~73,000 users per variation** (a +10% lift needs
+~280,000). That is why **29 daily aggregates can only detect very large
+(~+100%+) effects** — to measure realistic single/double-digit lifts you need
+user-level data at these sample sizes.
 
-| Metric (per Reach) | P(Test > Control) | Relative lift (mean) | 95% credible interval |
-|---|:---:|:---:|---|
-| Clicks/Reach | ≈ 0.999 | +176% | (+68%, +284%) |
-| AddToCart/Reach | ≈ 0.96 | +59% | (−7%, +125%) |
-| Purchases/Reach | ≈ 0.998 | +127% | (+42%, +211%) |
+## How to run
 
-(Monte Carlo probabilities are reported as bounded values, never as exactly 0 or 1.)
-
-### Why the count-based and rate-based results differ
-
-The two sections analyzed **different estimands** — raw daily *counts* vs. *rates per reach*. Both descriptions are true simultaneously: the test campaign converted a much smaller delivered audience at much higher rates, ending with the same purchase volume at higher cost.
-
-## Recommendation
-
-**Do not scale the test campaign yet — and do not kill it either. Fix delivery and measurement, then re-test.**
-
-- Per unit of reach, the test campaign clicks and purchases at dramatically higher rates (robust to multiplicity correction, non-parametric tests, and outlier exclusion).
-- The add-to-cart lift is unproven.
-- As delivered, the test campaign produced **no more purchases at ~12% higher spend** (cost per purchase $5.02 vs. $4.41).
-- The rate advantage is entangled with two anomalous delivery days and funnel-tracking violations, so the per-reach superiority may partly reflect a narrower, warmer audience rather than better creative.
-
-Next steps: diagnose why test's delivery collapsed onto a small high-converting audience; fix funnel tracking and capture revenue (for ROAS); re-run with matched targeting/budgets — ideally with user-level instrumentation, since daily aggregates can only detect ~100%+ relative effects.
-
-## How to Use This Notebook
-
-1. **Install dependencies:**
-   ```bash
-   pip install pandas numpy scipy matplotlib seaborn
-   ```
-2. **Run the notebook:** open `ab_testing.ipynb` and run all cells top to bottom (random seeds are fixed; results are reproducible).
+```bash
+pip install pandas numpy scipy matplotlib
+jupyter notebook ab_testing.ipynb   # run all cells top to bottom
+```
 
 ## Files
 
-- **`ab_testing.ipynb`** — the full analysis: data-quality audit, EDA, design, frequentist + cost analysis, Bayesian analysis.
-- **`control_group.csv`**, **`test_group.csv`** — daily aggregates for each campaign (semicolon-separated), at the repository root.
-- **`AUDIT.md`** — finding-by-finding audit of the errors in the previous version of this analysis and how each was fixed.
+- **`ab_testing.ipynb`** — the analysis: clean → compare → design (sample size).
+- **`control_group.csv`**, **`test_group.csv`** — the daily campaign data.
+- **`AUDIT.md`** — detailed audit of the earlier, more complex version of this
+  analysis (kept as historical record).
 
 ## Dependencies
 
 - Python 3.9+
-- pandas, numpy, scipy, matplotlib, seaborn
+- pandas, numpy, scipy, matplotlib
 
 ## Contact
 
-For questions or issues regarding this analysis, reach out at [martin.lim511@gmail.com] or open an issue on this repository.
+For questions, reach out at martin.lim511@gmail.com or open an issue.
